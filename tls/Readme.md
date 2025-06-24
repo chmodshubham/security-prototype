@@ -92,7 +92,7 @@ openssl req -new -key tls/certs/server-key.pem -out tls/certs/server.csr -config
 # 3. Sign server CSR with CA
 openssl x509 -req -in tls/certs/server.csr -CA tls/certs/ca-cert.pem -CAkey tls/certs/ca-key.pem -CAcreateserial -out tls/certs/server-cert.pem -days 365 -sha256 -extfile tls/server-openssl.cnf -extensions req_ext
 
-# 4. Clean up - optional
+# 4. Clean up
 rm tls/certs/server.csr
 rm tls/certs/ca-cert.srl
 ```
@@ -101,13 +101,16 @@ rm tls/certs/ca-cert.srl
 
 1. **Generate certificates** (see above).
 2. **Start the server:**
-  ```bash
-   go run . -mode=tls-server
-  ```
+
+```bash
+go run . -mode=tls-server
+```
+
 3. **Run the client:**
-   ```bash
-   go run . -mode=tls-client
-   ```
+
+```bash
+go run . -mode=tls-client
+```
 
 ## Security Warning
 
