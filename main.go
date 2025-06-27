@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"security-prototype/mtls"
+	"security-prototype/quic"
 	"security-prototype/tls"
 )
 
@@ -34,8 +35,18 @@ func main() {
 		if err := mtls.RunClient(); err != nil {
 			log.Fatalf("mTLS Client error: %v", err)
 		}
+	case "quic-server":
+		log.Println("Starting QUIC server...")
+		if err := quic.RunServer(); err != nil {
+			log.Fatalf("QUIC Server error: %v", err)
+		}
+	case "quic-client":
+		log.Println("Starting QUIC client...")
+		if err := quic.RunClient(); err != nil {
+			log.Fatalf("QUIC Client error: %v", err)
+		}
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: %s -mode=[tls-server|tls-client|mtls-server|mtls-client]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -mode=[tls-server|tls-client|mtls-server|mtls-client][quic-server][quic-client]]\n", os.Args[0])
 		os.Exit(1)
 	}
 }
