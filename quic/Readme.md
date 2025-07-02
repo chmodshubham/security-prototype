@@ -16,6 +16,19 @@ This is a minimal QUIC-secured communication between a Go client and server usin
 - The server uses `certs/server-cert.pem` and `certs/server-key.pem` to authenticate itself.
 - The client loads the CA certificate (`certs/ca-cert.pem`) to verify the server's identity.
 
+## Real-World QUIC Scenario vs. This Prototype
+
+| Aspect                       | Real-World Scenario                                                     | This Prototype                             |
+| ---------------------------- | ----------------------------------------------------------------------- | ------------------------------------------ |
+| **Certificate Authority**    | Uses certificates signed by trusted CAs (e.g., Let's Encrypt, DigiCert) | Uses a local CA to sign server certificate |
+| **Certificate Verification** | Client strictly verifies server certificate and hostname                | Client verifies server certificate via CA  |
+| **Mutual Authentication**    | Optional, supported by QUIC but not always used                         | Not implemented                            |
+| **Transport Protocol**       | UDP-based, multiplexed, 0-RTT, loss recovery, congestion control        | UDP-based, basic QUIC features via quic-go |
+| **TLS Version**              | Always uses TLS 1.3 for handshake and encryption                        | Enforced: TLS 1.3 only                     |
+| **Key Management**           | Secure storage, rotation, and revocation                                | Static files in project directory          |
+| **Cipher Suites**            | Restricted to strong, secure ciphers                                    | Defaults to Go's secure set                |
+| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                   | Minimal, for educational/demo use          |
+
 ## How to Generate CA and Server Certificates
 
 ```bash

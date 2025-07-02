@@ -41,8 +41,6 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 - The server reads the message and echoes it back.
 - The client reads and prints the server's response.
 
----
-
 ## TLS Version Used
 
 - **Go's default TLS version is 1.2 or higher** (TLS 1.3 if both client and server support it).
@@ -52,7 +50,6 @@ This is a minimal TLS-secured communication between a Go client and server. The 
   ```
 - The actual version negotiated is visible via `conn.ConnectionState().Version`.
 
----
 
 ## Real-World TLS Scenario vs. This Prototype
 
@@ -67,16 +64,12 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 | **Mutual Authentication**    | Optional, often used in high-security environments                      | Not implemented                                  |
 | **Production Security**      | Hardened configs, monitoring, logging, DoS protection                   | Minimal, for educational/demo use                |
 
----
-
 ## How TLS Works (Simplified)
 
 1. **Handshake:** Client and server agree on protocol version, cipher suite, and exchange keys.
 2. **Authentication:** Server proves its identity with a certificate signed by a trusted CA.
 3. **Encryption:** All data after the handshake is encrypted using negotiated keys.
 4. **Integrity:** Each message is authenticated to prevent tampering.
-
----
 
 ## How to Generate CA and Server Certificates
 

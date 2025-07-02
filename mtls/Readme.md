@@ -44,7 +44,18 @@ This is a minimal **mutual TLS (mTLS)**-secured communication between a Go clien
 - The server reads the message and echoes it back.
 - The client reads and prints the server's response.
 
----
+## Real-World mTLS Scenario vs. This Prototype
+
+| Aspect                       | Real-World Scenario                                                          | This Prototype                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Certificate Authority**    | Uses certificates signed by trusted CAs (e.g., DigiCert, Let's Encrypt)      | Uses a local CA to sign both server and client certs                |
+| **Certificate Verification** | Both client and server strictly verify each other's certificate and hostname | Both client and server verify each other's certificate via local CA |
+| **Mutual Authentication**    | Enforced by requiring client and server certificates                         | Enforced (client and server both present certs)                     |
+| **Hostname Validation**      | Enforced by both parties                                                     | Enforced (`ServerName: "localhost"`) on client                      |
+| **Key Management**           | Secure storage, rotation, and revocation                                     | Static files in project directory                                   |
+| **TLS Version**              | Enforced minimum (usually TLS 1.2 or 1.3)                                    | Defaults to Go's minimum (TLS 1.2+)                                 |
+| **Cipher Suites**            | Restricted to strong, secure ciphers                                         | Defaults to Go's secure set                                         |
+| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                        | Minimal, for educational/demo use                                   |
 
 ## How to Generate CA, Server, and Client Certificates
 
@@ -65,7 +76,7 @@ openssl genrsa -out mtls/certs/client-key.pem 4096
 openssl req -new -key mtls/certs/client-key.pem -out mtls/certs/client.csr -subj "/CN=mtls-client"
 
 # 5. Sign client CSR with CA
-openssl x509 -req -in mtls/certs/client.csr -CA mtls/certs/ca-cert.pem -CAkey mtls/certs/ca-key.pem -CAcreateserial -out mtls/certs/client-cert.pem -days 365 -sha256 
+openssl x509 -req -in mtls/certs/client.csr -CA mtls/certs/ca-cert.pem -CAkey mtls/certs/ca-key.pem -CAcreateserial -out mtls/certs/client-cert.pem -days 365 -sha256
 
 # 6. Clean up
 rm mtls/certs/server.csr mtls/certs/client.csr mtls/certs/ca-cert.srl

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"security-prototype/ipsec"
 	"security-prototype/mtls"
 	"security-prototype/quic"
 	"security-prototype/tls"
@@ -45,8 +46,18 @@ func main() {
 		if err := quic.RunClient(); err != nil {
 			log.Fatalf("QUIC Client error: %v", err)
 		}
+	case "ipsec-responder":
+		log.Println("Starting IPsec Responder...")
+		if err := ipsec.RunResponder(); err != nil {
+			log.Fatalf("Ipsec Responder error: %v", err)
+		}
+	case "ipsec-initiator":
+		log.Println("Starting IPsec Initiator...")
+		if err := ipsec.RunInitiator(); err != nil {
+			log.Fatalf("IPsec Initiator error: %v", err)
+		}
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: %s -mode=[tls-server|tls-client|mtls-server|mtls-client][quic-server][quic-client]]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -mode=[tls-server|tls-client|mtls-server|mtls-client][quic-server][quic-client][ipsec-initiator][ipsec-responder]]\n", os.Args[0])
 		os.Exit(1)
 	}
 }
