@@ -9,40 +9,49 @@ This is a minimal **mutual TLS (mTLS)**-secured communication between a Go clien
 ### 1. Certificate Generation
 
 - A CA certificate (`certs/ca-cert.pem`) and private key (`certs/ca-key.pem`) are generated.
-- A server key and certificate signing request (CSR) are generated.
-- The server CSR is signed by the CA, producing `certs/server-cert.pem`.
-- A client key and CSR are generated.
-- The client CSR is signed by the CA, producing `certs/client-cert.pem`.
+- Server and client certificates are signed by the CA, producing `certs/server-cert.pem` and `certs/client-cert.pem`.
+- Private keys are stored as `certs/server-key.pem` and `certs/client-key.pem`.
 - The server uses `certs/server-cert.pem` and `certs/server-key.pem` to authenticate itself.
 - The client uses `certs/client-cert.pem` and `certs/client-key.pem` to authenticate itself.
-- Both sides use the CA certificate (`certs/ca-cert.pem`) to verify each other's identity.
+- Both sides use the CA certificate (`certs/ca-cert.pem`) to verify each other's identity with full certificate chain validation.
 
 ### 2. Server Startup
 
-- The server loads its certificate and key.
-- Loads the CA certificate and sets up a `tls.Config` with `ClientAuth: tls.RequireAndVerifyClientCert`.
-- Listens for incoming TLS connections on `:9443`.
+- The server loads its certificate and key with detailed certificate logging.
+- Loads the CA certificate and sets up an enhanced `tls.Config` with `ClientAuth: tls.RequireAndVerifyClientCert`.
+- Configures TLS 1.2-1.3 support, secure cipher suites, and server cipher preference.
+- Listens for incoming TLS connections on `:9443` with connection state monitoring.
 
 ### 3. Client Connection
 
-- The client loads its certificate and key.
-- Loads the CA certificate and sets up a `tls.Config` with its own certificate and the CA as `RootCAs`.
+- The client loads its certificate and key with certificate detail logging.
+- Loads the CA certificate and sets up an enhanced `tls.Config` with mutual authentication.
+- Configures matching TLS version range and cipher suites for compatibility.
 - Connects to `localhost:9443` using `tls.Dial`, initiating the mTLS handshake.
 
 ### 4. mTLS Handshake
 
-- **ClientHello:** The client sends a `ClientHello` message.
-- **ServerHello:** The server responds with a `ServerHello`.
-- **Certificate Exchange:** Both server and client send their CA-signed certificates.
-- **Certificate Verification:** Both sides verify the peer's certificate against the CA and check hostnames.
-- **Key Exchange:** Both parties exchange key material to derive a shared secret.
-- **Finished:** Both sides confirm the handshake is complete and switch to encrypted communication.
+- **ClientHello:** The client sends supported TLS versions (1.2-1.3), cipher suites, and client certificate.
+- **ServerHello:** The server responds with selected TLS version, cipher suite, and server certificate.
+- **Mutual Certificate Exchange:** Both server and client send their CA-signed certificates.
+- **Mutual Verification:** Both sides verify the peer's certificate against the CA, validate certificate chains, and check hostnames.
+- **Key Exchange:** Both parties exchange key material using ECDHE for perfect forward secrecy.
+- **Finished:** Both sides confirm mutual authentication success and switch to encrypted communication.
 
 ### 5. Data Exchange
 
-- The client sends "Hello from mTLS client" over the encrypted channel.
-- The server reads the message and echoes it back.
-- The client reads and prints the server's response.
+- The client sends multiple test messages: "Hello from mTLS client", "Testing mutual TLS authentication", etc.
+- Each message is encrypted using the negotiated cipher suite over the encrypted channel.
+- The server processes each message and echoes it back with timestamp and client address information.
+- Both sides handle multiple message exchanges with proper timeout management.
+
+## TLS Configuration and Security Features
+
+- **TLS Versions:** TLS 1.2 and TLS 1.3 support (minimum TLS 1.2 enforced)
+- **Mutual Authentication:** Both client and server verify each other's certificates automatically
+- **Cipher Suites:** AES-256-GCM, AES-128-GCM, ChaCha20-Poly1305 for strong encryption
+- **Perfect Forward Secrecy:** ECDHE key exchange ensures session keys are ephemeral
+- **Certificate Validation:** Full chain verification against trusted CA with explicit hostname checking
 
 ## Real-World mTLS Scenario vs. This Prototype
 
@@ -50,12 +59,22 @@ This is a minimal **mutual TLS (mTLS)**-secured communication between a Go clien
 | ---------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | **Certificate Authority**    | Uses certificates signed by trusted CAs (e.g., DigiCert, Let's Encrypt)      | Uses a local CA to sign both server and client certs                |
 | **Certificate Verification** | Both client and server strictly verify each other's certificate and hostname | Both client and server verify each other's certificate via local CA |
-| **Mutual Authentication**    | Enforced by requiring client and server certificates                         | Enforced (client and server both present certs)                     |
+| **Mutual Authentication**    | Enforced by requiring client and server certificates                         | Enforced with `RequireAndVerifyClientCert`                          |
 | **Hostname Validation**      | Enforced by both parties                                                     | Enforced (`ServerName: "localhost"`) on client                      |
-| **Key Management**           | Secure storage, rotation, and revocation                                     | Static files in project directory                                   |
-| **TLS Version**              | Enforced minimum (usually TLS 1.2 or 1.3)                                    | Defaults to Go's minimum (TLS 1.2+)                                 |
-| **Cipher Suites**            | Restricted to strong, secure ciphers                                         | Defaults to Go's secure set                                         |
-| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                        | Minimal, for educational/demo use                                   |
+| **Key Management**           | Secure storage, rotation, and revocation with HSMs                          | Static files in project directory                                   |
+| **TLS Version**              | TLS 1.2 minimum, TLS 1.3 preferred                                          | TLS 1.2-1.3 range with secure configuration                         |
+| **Cipher Suites**            | Restricted to strong, AEAD ciphers                                          | Modern secure cipher suites (GCM, ChaCha20-Poly1305)               |
+| **Certificate Transparency** | CT logs for public certificate monitoring                                   | Not implemented (local CA)                                          |
+| **OCSP Stapling**            | Real-time certificate revocation checking                                   | Not implemented                                                      |
+| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                        | Enhanced logging and connection management                           |
+
+## How mTLS Works (Technical)
+
+1. **Mutual Handshake:** Both client and server negotiate TLS version, cipher suite, and exchange certificates for mutual authentication.
+2. **Dual Authentication:** Both parties prove their identities with certificates signed by the trusted CA.
+3. **Bidirectional Verification:** Each side validates the peer's certificate chain and hostname.
+4. **Key Exchange:** Ephemeral keys are generated using ECDHE for perfect forward secrecy.
+5. **Encrypted Communication:** All application data is encrypted using negotiated AEAD cipher with mutual trust.
 
 ## How to Generate CA, Server, and Client Certificates
 
@@ -99,10 +118,11 @@ go run . -mode=mtls-client
 
 ## Security Notes
 
-- Both server and client must present valid, CA-signed certificates.
-- Never use `InsecureSkipVerify: true` in production.
+- Both server and client must present valid, CA-signed certificates for connection establishment.
+- TLS configuration automatically rejects connections with invalid or unverified certificates.
+- Certificate verification happens at the TLS layer - additional verification functions are redundant.
 - Always verify peer certificates and hostnames to prevent man-in-the-middle attacks.
-- Use strong, unique keys and protect private keys.
+- Use strong, unique keys and protect private keys with appropriate file permissions.
 
 ## References
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a minimal TLS-secured communication between a Go client and server. The server listens on port `:8443` using a certificate signed by a local Certificate Authority (CA). The client connects, performs a TLS handshake, sends a message, and prints the server's response. The client **authenticates the server using the CA certificate**, not a self-signed or directly trusted server certificate.
+This is a TLS-secured communication between a Go client and server. The server listens on port `:8443` using a certificate signed by a local Certificate Authority (CA). The client connects, performs a TLS handshake, sends multiple messages, and prints the server's responses. The client **authenticates the server using the CA certificate**, not a self-signed or directly trusted server certificate.
 
 ## Detailed Call Flow
 
@@ -16,8 +16,9 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 
 ### 2. Server Startup
 
-- The server loads `server/server.pem` and `server/server-key.pem`.
-- It creates a `tls.Config` specifying the certificate and (optionally) the minimum TLS version (default is TLS 1.2+ in Go).
+- The server loads `server-cert.pem` and `server-key.pem`.
+- It creates a `tls.Config` specifying the certificate and TLS version constraints (TLS 1.2-1.3).
+- The server configures secure cipher suites and prefers server cipher suite selection.
 - The server listens for incoming TLS connections on `:8443`.
 
 ### 3. Client Connection
@@ -28,7 +29,7 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 
 ### 4. TLS Handshake
 
-- **ClientHello:** The client sends a `ClientHello` message, listing supported TLS versions (Go defaults to TLS 1.2+), cipher suites, and random data.
+- **ClientHello:** The client sends a `ClientHello` message, listing supported TLS versions (TLS 1.2-1.3), cipher suites, and random data.
 - **ServerHello:** The server responds with a `ServerHello`, selecting the TLS version and cipher suite.
 - **Certificate Exchange:** The server sends its CA-signed certificate (`server-cert.pem`) to the client.
 - **Certificate Verification:** The client verifies the server's certificate against its trusted CA (`ca-cert.pem`), and checks the hostname.
@@ -37,19 +38,17 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 
 ### 5. Data Exchange
 
-- The client sends "Hello from client" over the encrypted channel.
-- The server reads the message and echoes it back.
-- The client reads and prints the server's response.
+- The client sends multiple test messages: "Hello from TLS client", "Testing secure communication", etc.
+- Each message is encrypted using the negotiated cipher suite over the encrypted channel.
+- The server reads each message and echoes it back with timestamp and client address information.
+- The client reads and prints each server response.
 
 ## TLS Version Used
 
-- **Go's default TLS version is 1.2 or higher** (TLS 1.3 if both client and server support it).
-- You can enforce a minimum version in `tls.Config`:
-  ```go
-  MinVersion: tls.VersionTLS12,
-  ```
-- The actual version negotiated is visible via `conn.ConnectionState().Version`.
-
+- **TLS version range:** TLS 1.2 to TLS 1.3 (TLS 1.2 minimum enforced)
+- **Cipher suites:** Secure AEAD ciphers (AES-GCM, ChaCha20-Poly1305)
+- The actual version negotiated is visible via `conn.ConnectionState().Version`
+- Perfect Forward Secrecy ensured through ECDHE key exchange
 
 ## Real-World TLS Scenario vs. This Prototype
 
@@ -59,10 +58,10 @@ This is a minimal TLS-secured communication between a Go client and server. The 
 | **Certificate Verification** | Client strictly verifies server certificate and hostname                | Client verifies server certificate via CA         |
 | **Hostname Validation**      | Enforced by client                                                      | Enforced (`ServerName: "localhost"`)             |
 | **Key Management**           | Secure storage, rotation, and revocation                                | Static files in project directory                |
-| **TLS Version**              | Enforced minimum (usually TLS 1.2 or 1.3)                               | Defaults to Go's minimum (TLS 1.2+)              |
-| **Cipher Suites**            | Restricted to strong, secure ciphers                                    | Defaults to Go's secure set                      |
-| **Mutual Authentication**    | Optional, often used in high-security environments                      | Not implemented                                  |
-| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                   | Minimal, for educational/demo use                |
+| **TLS Version**              | Enforced minimum (usually TLS 1.2 or 1.3)                               | TLS 1.2-1.3 range with secure configuration      |
+| **Cipher Suites**            | Restricted to strong, secure ciphers                                    | Modern AEAD cipher suites                        |
+| **Mutual Authentication**    | Optional, often used in high-security environments                      | Not implemented (server-only authentication)     |
+| **Production Security**      | Hardened configs, monitoring, logging, DoS protection                   | Basic implementation for educational/demo use    |
 
 ## How TLS Works (Simplified)
 
